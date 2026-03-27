@@ -1,36 +1,53 @@
 #!/usr/bin/env bash
 # run-tests.sh
 # Fires: PostToolUse on Edit|MultiEdit|Write
-# Runs the project's test command after every source file change.
-# Configure the test command in .claude/project.env: TEST_CMD="pytest tests/ -v"
-# Falls back to auto-detection if not set.
+# Runs project test suite after every source file change.
+# Set TEST_CMD in .claude/project.env — falls back to auto-detection.
 
 set -euo pipefail
 
 INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')
+
+if command -v jq &>/dev/null; then
+  FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""')
+else
+  FILE_PATH=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_input',{}).get('file_path',''))" 2>/dev/null || echo "")
+fi
+
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
-# Skip non-source files
+# Skip non-source files — use python for reliable cross-platform extension check
 if [[ -z "$FILE_PATH" ]]; then exit 0; fi
-if [[ "$FILE_PATH" =~ \.(md|json|yaml|yml|sh|toml|lock|env)$ ]]; then exit 0; fi
-if [[ "$FILE_PATH" == *".claude/"* ]]; then exit 0; fi
 
-LOG_FILE="$PROJECT_DIR/.claude/logs/test-results.log"
-mkdir -p "$(dirname "$LOG_FILE")"
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+SKIP=$(python3 -c "
+import sys, os
+p = sys.argv[1]
+skip_exts = {'.md','.json','.yaml','.yml','.sh','.toml','.lock','.env'}
+skip_dirs = ['.claude/']
+ext = os.path.splitext(p)[1].lower()
+if ext in skip_exts: print('yes')
+elif any(d in p for d in skip_dirs): print('yes')
+else: print('no')
+" "$FILE_PATH" 2>/dev/null || echo "no")
+
+if [[ "$SKIP" == "yes" ]]; then exit 0; fi
+
+LOG_DIR="$PROJECT_DIR/.claude/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/test-results.log"
+TIMESTAMP=$(python3 -c "import datetime; print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))" 2>/dev/null || echo "unknown-time")
 echo "[$TIMESTAMP] Running tests after edit to: $FILE_PATH" >> "$LOG_FILE"
 
-# Load project-specific config if it exists
+# Load project-specific config
 PROJECT_ENV="$PROJECT_DIR/.claude/project.env"
 TEST_CMD=""
 if [[ -f "$PROJECT_ENV" ]]; then
-  TEST_CMD=$(grep '^TEST_CMD=' "$PROJECT_ENV" | cut -d'=' -f2- | tr -d '"' || echo "")
+  TEST_CMD=$(grep '^TEST_CMD=' "$PROJECT_ENV" | cut -d'=' -f2- | tr -d '"' 2>/dev/null || echo "")
 fi
 
-# Auto-detect if not configured
+# Auto-detect test runner if not configured
 if [[ -z "$TEST_CMD" ]]; then
-  if [[ -f "$PROJECT_DIR/pyproject.toml" ]] || [[ -f "$PROJECT_DIR/setup.py" ]]; then
+  if [[ -f "$PROJECT_DIR/pyproject.toml" || -f "$PROJECT_DIR/setup.py" ]]; then
     TEST_CMD="python -m pytest tests/ -v"
   elif [[ -f "$PROJECT_DIR/package.json" ]]; then
     TEST_CMD="npm test"
@@ -39,13 +56,10 @@ if [[ -z "$TEST_CMD" ]]; then
   elif [[ -f "$PROJECT_DIR/Cargo.toml" ]]; then
     TEST_CMD="cargo test"
   else
-    # No test runner found — warn Claude but don't hard block (project may not have tests yet)
-    cat <<EOF
-{
+    printf '%s\n' '{
   "decision": "block",
-  "reason": "No test runner detected and TEST_CMD not set in .claude/project.env. Set up a test framework and add TEST_CMD to .claude/project.env before writing code."
-}
-EOF
+  "reason": "No test runner detected and TEST_CMD not set in .claude/project.env. Configure a test framework and set TEST_CMD before writing code."
+}'
     exit 1
   fi
 fi
@@ -57,12 +71,11 @@ echo "$TEST_OUTPUT" >> "$LOG_FILE"
 
 if [[ $TEST_EXIT -ne 0 ]]; then
   TRIMMED=$(echo "$TEST_OUTPUT" | tail -40)
-  cat <<EOF
-{
-  "decision": "block",
-  "reason": "TESTS FAILED after editing '$FILE_PATH'. Fix all failures before continuing.\n\n$TRIMMED"
-}
-EOF
+  python3 -c "
+import json, sys
+reason = 'TESTS FAILED after editing ' + repr(sys.argv[1]) + '. Fix all failures before continuing.\n\n' + sys.argv[2]
+print(json.dumps({'decision': 'block', 'reason': reason}))
+" "$FILE_PATH" "$TRIMMED"
   exit 1
 fi
 

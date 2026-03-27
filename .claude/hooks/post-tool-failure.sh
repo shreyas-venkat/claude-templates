@@ -6,19 +6,24 @@
 set -euo pipefail
 
 INPUT=$(cat)
-TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"')
-ERROR=$(echo "$INPUT" | jq -r '.tool_response.error // "unknown error"')
+
+if command -v jq &>/dev/null; then
+  TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"')
+  ERROR=$(echo "$INPUT" | jq -r '.tool_response.error // "unknown error"')
+else
+  TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name','unknown'))" 2>/dev/null || echo "unknown")
+  ERROR=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_response',{}).get('error','unknown error'))" 2>/dev/null || echo "unknown error")
+fi
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
-LOG_FILE="$PROJECT_DIR/.claude/logs/failures.log"
-mkdir -p "$(dirname "$LOG_FILE")"
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-echo "[$TIMESTAMP] TOOL FAILURE: $TOOL_NAME | $ERROR" >> "$LOG_FILE"
+LOG_DIR="$PROJECT_DIR/.claude/logs"
+mkdir -p "$LOG_DIR"
+TIMESTAMP=$(python3 -c "import datetime; print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))" 2>/dev/null || echo "unknown-time")
+echo "[$TIMESTAMP] TOOL FAILURE: $TOOL_NAME | $ERROR" >> "$LOG_DIR/failures.log"
 
-cat <<EOF
-{
-  "decision": "block",
-  "reason": "TOOL FAILURE: '$TOOL_NAME' failed with: $ERROR\n\nBefore retrying: (1) explain why this failed, (2) state your revised approach, (3) confirm it differs from what you just tried."
-}
-EOF
+python3 -c "
+import json, sys
+reason = \"TOOL FAILURE: '\" + sys.argv[1] + \"' failed with: \" + sys.argv[2] + \"\n\nBefore retrying: (1) explain why this failed, (2) state your revised approach, (3) confirm it differs from what you just tried.\"
+print(json.dumps({'decision': 'block', 'reason': reason}))
+" "$TOOL_NAME" "$ERROR"
 exit 1
