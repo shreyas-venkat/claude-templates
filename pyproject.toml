@@ -1,0 +1,40 @@
+[project]
+name = "project-name"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long — ruff format handles this
+    "B008",  # do not perform function calls in default arguments (FastAPI uses this)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: marks tests that connect to real external services",
+]
+
+[tool.sqlfluff.core]
+dialect = "ansi"   # override per project: duckdb, postgres, bigquery, etc.
+max_line_length = 100

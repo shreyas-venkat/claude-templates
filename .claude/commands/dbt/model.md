@@ -1,5 +1,5 @@
 ---
-description: Scaffold a new dbt model with SQL and schema.yml entry
+description: Scaffold a new dbt model with SQL and schema.yml entry. Use when user says "create a dbt model", "add a new model", "build a staging model for X", "scaffold a mart", or "new dbt model for Y table".
 ---
 
 Create a new dbt model: $ARGUMENTS
@@ -35,3 +35,5 @@ First, understand the project structure:
 ```
 
 Run `dbt compile --select <model_name>` to verify the model compiles.
+
+**If `dbt compile` fails:** Show the full error. Common causes: missing `{{ ref() }}` target, wrong schema path in `dbt_project.yml`, or Jinja syntax error. Fix before finishing.

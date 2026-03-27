@@ -1,11 +1,26 @@
+@GUARDRAILS.md
+
 # Claude Templates
 
-A drop-in `.claude/` configuration for Claude Code providing MCP server setup and a full library of slash commands for daily development work.
+Drop-in `.claude/` config for Claude Code: MCP servers + slash commands for GitHub, code, dbt, email, and data workflows.
+
+Hard rules live in `GUARDRAILS.md` (imported above) and in `.claude/hooks/` (enforced deterministically via `settings.json`). This file is advisory. When they conflict, hooks win.
+
+---
+
+## Session Workflow
+
+1. **Start with a spec.** Create or read `SPEC.md` before writing any code. The `check-spec` hook blocks all file writes until it exists and is filled out.
+2. **Never work on `main` directly.** The `block-main` hook blocks edits and pushes on main. Create a feature branch.
+3. **Tests run after every edit.** The `run-tests` hook fires after every file change. Fix failures before moving on.
+4. **Done means the Stop hook passes.** Full test suite green, no debug markers, every source file has a test file.
+
+---
 
 ## MCP Servers
 
 | Server | Purpose | Key env vars |
-|--------|---------|--------------|
+|--------|---------|-------------|
 | `filesystem` | Expanded file access beyond the project root | — |
 | `github` | Issues, PRs, reviews, releases, repo management | `GITHUB_TOKEN` |
 | `gmail` | Read, compose, reply, and search email | file-based OAuth (one-time setup) |
@@ -13,23 +28,24 @@ A drop-in `.claude/` configuration for Claude Code providing MCP server setup an
 
 ## Setup
 
-1. Copy the `.claude/` directory, `CLAUDE.md`, and `.mcp.json` into the root of your repo.
-2. Copy `.env.example` to `.env` and fill in your credentials.
-3. Export the env vars in your shell before launching Claude Code:
+1. Copy `.claude/`, `CLAUDE.md`, `GUARDRAILS.md`, and `.mcp.json` into your repo root.
+2. Copy `.env.example` → `.env` and fill in credentials.
+3. Export env vars before launching Claude Code:
    ```bash
    export $(grep -v '^#' .env | xargs)
-   # or use direnv: add `dotenv` to your .envrc
+   # or use direnv
    ```
 4. Authenticate Gmail (one-time):
    ```bash
    npx @gongrzhe/server-gmail-autoauth-mcp auth
    ```
-   A browser window opens — sign in with Google. Credentials are saved to `~/.gmail-mcp/` and reused automatically.
 5. Open the project in Claude Code — MCP servers start automatically.
+
+---
 
 ## Slash Commands
 
-Commands are grouped by domain. Invoke with `/domain/command [args]`.
+Invoke with `/domain/command [args]`.
 
 ### GitHub `/github/*`
 | Command | What it does |
@@ -62,12 +78,6 @@ Commands are grouped by domain. Invoke with `/domain/command [args]`.
 | `/dbt/source` | Define source tables and freshness checks |
 | `/dbt/macro` | Create a reusable Jinja macro |
 
-### Meta `/meta/*`
-| Command | What it does |
-|---------|-------------|
-| `/meta/create-skill` | Interactive guide to design, write, test, and iterate on a new skill or slash command |
-| `/meta/cleanup-skills` | Audit all existing slash commands against a quality rubric and apply targeted improvements |
-
 ### Email `/email/*`
 | Command | What it does |
 |---------|-------------|
@@ -83,6 +93,14 @@ Commands are grouped by domain. Invoke with `/domain/command [args]`.
 | `/data/explore` | Explore a table or dataset: schema, samples, stats |
 | `/data/report` | Generate a structured data analysis report |
 | `/data/profile` | Profile a table for nulls, distributions, and anomalies |
+
+### Meta `/meta/*`
+| Command | What it does |
+|---------|-------------|
+| `/meta/create-skill` | Design, write, test, and iterate on a new skill or slash command |
+| `/meta/cleanup-skills` | Audit all slash commands against a quality rubric and improve them |
+
+---
 
 ## Conventions
 

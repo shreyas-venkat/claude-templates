@@ -1,5 +1,5 @@
 ---
-description: Define dbt source tables with tests and freshness checks
+description: Define dbt source tables with tests and freshness checks in sources.yml. Use when user says "add a dbt source", "define source tables for X", "set up a new source", or "connect dbt to raw schema Y".
 ---
 
 Define a new dbt source: $ARGUMENTS
@@ -42,3 +42,5 @@ Add columns and tests for all key fields, especially:
 - Status/type enums (accepted_values)
 
 Run `dbt source freshness` after defining to verify connectivity.
+
+**If `dbt source freshness` fails:** Check that `loaded_at_field` matches the actual column name in the raw table. Common alternatives: `_fivetran_synced`, `_airbyte_extracted_at`, `updated_at`, `inserted_at`.

@@ -1,5 +1,5 @@
 ---
-description: Deep explanation of a file, function, or concept
+description: Deep explanation of a file, function, or concept in the codebase. Use when user says "explain this", "how does X work", "walk me through this file", "what does this function do", or "I don't understand this code".
 ---
 
 Explain the following in depth: $ARGUMENTS
@@ -27,3 +27,5 @@ Edge cases, side effects, or things that would surprise a new reader.
 A concrete usage example if applicable.
 
 Pitch the explanation at a competent engineer who is new to this codebase, not a beginner.
+
+**If the file or function is not found:** Use Grep to search for the name across the codebase before giving up. If still not found, report clearly and ask the user to clarify the path or name.

@@ -1,0 +1,33 @@
+# Generic test image — runs pytest on Linux (for cross-platform test verification).
+# Copy this into the project root and customise for the project's dependencies.
+#
+# Usage:
+#   docker build -f Dockerfile.test -t myproject-test .
+#   docker run --rm myproject-test
+#
+# Or use tests/run_in_docker.sh which wraps this automatically.
+
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (fast pip replacement)
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+WORKDIR /app
+
+# Install dependencies — adjust file name to match your project
+COPY requirements.txt ./
+RUN uv pip install --system -r requirements.txt
+RUN uv pip install --system pytest
+
+# Copy source and tests
+COPY app/ ./app/
+COPY tests/ ./tests/
+COPY pyproject.toml ./
+
+CMD ["python", "-m", "pytest", "tests/", "-v", "-m", "not integration"]

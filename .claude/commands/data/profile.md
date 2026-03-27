@@ -1,8 +1,10 @@
 ---
-description: Profile a table — nulls, distributions, duplicates, and anomalies
+description: Profile a table for data quality — nulls, distributions, duplicates, and anomalies with a scorecard. Use when user says "profile this table", "check data quality", "how clean is this data", "find nulls and duplicates", or "data quality report for X".
 ---
 
 Profile table: $ARGUMENTS
+
+**Before running any query:** Check row count with `SELECT COUNT(*) FROM <table>`. If > 100M rows, add `USING SAMPLE 1000000` to all full-table scans to avoid timeouts.
 
 Run a full data quality profile via MotherDuck MCP.
 
@@ -42,7 +44,6 @@ SELECT <pk>, COUNT(*) AS n FROM <table> GROUP BY 1 HAVING COUNT(*) > 1;
 **6. Date gaps** (if a date column exists)
 Check for unexpected gaps in the time series.
 
-**Large table guard:** If row count > 100M, add `USING SAMPLE 1000000` to distribution and null queries to avoid timeouts.
 
 Produce a summary scorecard using these consistent thresholds:
 

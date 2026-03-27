@@ -1,5 +1,5 @@
 ---
-description: Write dbt schema tests and custom data tests for a model
+description: Write dbt schema tests and custom data tests for a model. Use when user says "add tests to this dbt model", "write dbt tests", "test this model", "add schema tests", or "validate this dbt model".
 ---
 
 Write dbt tests for: $ARGUMENTS
@@ -37,3 +37,5 @@ where <condition_that_should_never_be_true>
 ```
 
 Run `dbt test --select <model_name>` after writing to confirm all tests pass.
+
+**If tests fail:** Show the failing test name and the offending rows. Do not remove tests to make them pass — investigate and fix the data or the model logic instead.

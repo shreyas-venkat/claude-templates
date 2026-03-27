@@ -1,5 +1,5 @@
 ---
-description: Stage changes, generate a conventional commit message, and commit
+description: Stage changes, generate a conventional commit message, and commit. Use when user says "commit my changes", "write a commit message", "commit this", or "save my work". Do not use for amending existing commits or interactive rebases.
 ---
 
 Run `git status` and `git diff` to understand all staged and unstaged changes.

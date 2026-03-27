@@ -1,5 +1,5 @@
 ---
-description: Review a PR thoroughly for correctness, security, style, and performance
+description: Review a PR thoroughly for correctness, security, style, and performance. Use when user says "review this PR", "look at PR #N", "check this pull request", or "give me feedback on this PR".
 ---
 
 Review pull request: $ARGUMENTS
@@ -39,3 +39,5 @@ Format your review as:
 - A clear verdict: Approve / Request Changes / Comment
 
 If `--comment` is in $ARGUMENTS, post the review via `gh pr review`.
+
+**If the PR number is not found:** Ask the user to confirm the PR number with `gh pr list`.

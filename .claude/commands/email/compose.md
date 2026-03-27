@@ -1,5 +1,5 @@
 ---
-description: Compose a new email from a brief
+description: Compose a new email from a brief. Use when user says "write an email", "draft an email to X", "compose a message about Y", "help me email someone", or "write a note to Z".
 ---
 
 Compose an email. Brief: $ARGUMENTS

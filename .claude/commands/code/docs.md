@@ -1,5 +1,5 @@
 ---
-description: Generate docstrings, inline comments, and API documentation
+description: Generate docstrings, inline comments, and API documentation for a file or function. Use when user says "document this", "add docstrings", "write comments for this", "generate API docs", or "this function needs documentation".
 ---
 
 Write documentation for: $ARGUMENTS
@@ -28,3 +28,5 @@ If the file lacks one, add a brief description of the module's purpose and its m
 - Change any logic while adding docs
 
 Only touch files and sections mentioned in $ARGUMENTS.
+
+**Output:** Modified file(s) with docstrings/comments added in-place. No logic changed.

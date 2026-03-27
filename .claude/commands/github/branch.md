@@ -1,5 +1,5 @@
 ---
-description: Create a correctly-named branch from the latest main/master
+description: Create a correctly-named branch from the latest main/master. Use when user says "create a branch", "new branch for X", "start working on Y", or "make a feature/fix branch".
 ---
 
 Create a new branch for: $ARGUMENTS
@@ -19,3 +19,5 @@ Steps:
 5. Create and checkout: `git checkout -b <type>/<slug>`
 
 Print the branch name at the end.
+
+**If the remote is unreachable:** Create the branch from the local default branch and note that upstream tracking will need to be set when the remote is accessible.

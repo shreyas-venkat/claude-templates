@@ -1,5 +1,5 @@
 ---
-description: Summarize inbox or a specific email thread
+description: Summarize inbox or a specific email thread, grouped by urgency. Use when user says "summarize my inbox", "what's in my email", "catch me up on this thread", "what emails need my attention", or "summarize this conversation".
 ---
 
 Summarize emails. Scope: $ARGUMENTS
@@ -30,3 +30,5 @@ Group emails by urgency using these criteria:
 - <count> emails
 
 Keep summaries to one line per email. Flag anything with a date, dollar amount, or the word "please" as potentially action-required.
+
+**If the inbox is empty or Gmail MCP returns no results:** Say so clearly — do not fabricate email summaries.

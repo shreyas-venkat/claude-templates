@@ -1,5 +1,7 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "enableAllProjectMcpServers": true,
+
   "permissions": {
     "allow": [
       "Bash(git *)",
@@ -8,7 +10,111 @@
       "Bash(npm *)",
       "Bash(npx *)",
       "Bash(python *)",
-      "Bash(uv *)"
+      "Bash(uv *)",
+      "Bash(go test *)",
+      "Bash(cargo test *)",
+      "Read(**)"
+    ],
+    "deny": [
+      "Bash(git push origin main)",
+      "Bash(git push origin master)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git commit --no-verify *)",
+      "Bash(rm -rf *)",
+      "Bash(sudo *)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(secrets/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Edit(.env)",
+      "Edit(.env.*)",
+      "Edit(secrets/**)"
+    ]
+  },
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-tool-summary.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-spec.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-main.sh",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-main.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/sync-template.sh",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+
+    "PostToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-tests.sh",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+
+    "PostToolUseFailure": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-tool-failure.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-check.sh",
+            "timeout": 120
+          }
+        ]
+      }
     ]
   }
 }

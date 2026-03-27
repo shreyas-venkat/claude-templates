@@ -1,5 +1,5 @@
 ---
-description: Refactor code for clarity, simplicity, and performance
+description: Refactor code for clarity, simplicity, and performance without changing behavior. Use when user says "clean up this code", "refactor this", "this is too complex", "simplify this function", or "improve this code".
 ---
 
 Refactor: $ARGUMENTS
@@ -22,11 +22,6 @@ Apply only improvements that are clearly better:
 - Remove dead code and unused imports
 - Replace raw loops with idiomatic constructs
 - Fix performance issues (N+1, unnecessary recomputation, blocking calls)
-
-**Do not:**
-- Change external interfaces or function signatures without flagging it
-- Add features or handle cases not already in the code
-- Over-abstract into patterns for their own sake
 
 After changes, run any existing tests to confirm nothing broke.
 

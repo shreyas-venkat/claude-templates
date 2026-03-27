@@ -1,5 +1,5 @@
 ---
-description: Write dbt model documentation in schema.yml
+description: Write dbt model documentation in schema.yml — model descriptions, column descriptions, and grain. Use when user says "document this dbt model", "add descriptions to schema.yml", "write dbt docs", or "document these columns".
 ---
 
 Write documentation for dbt model: $ARGUMENTS
@@ -34,3 +34,7 @@ For each model and column, write clear, business-friendly descriptions:
 
 Use `>` for multi-line descriptions. Keep descriptions concise but complete.
 Do not add descriptions that just restate the column name.
+
+**Output:** Updated schema.yml with descriptions filled in for the target model and all its columns.
+
+**If the model is not in schema.yml yet:** Add a new entry. Do not leave the model undocumented.

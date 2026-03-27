@@ -1,5 +1,5 @@
 ---
-description: Reply to an email thread with a context-aware response
+description: Reply to an email thread with a context-aware response. Use when user says "reply to this email", "respond to this thread", "write a response to X's email", "how should I reply to this", or "draft a reply".
 ---
 
 Reply to an email thread. Context or instructions: $ARGUMENTS

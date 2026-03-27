@@ -1,5 +1,5 @@
 ---
-description: Systematic root-cause analysis and fix
+description: Systematic root-cause analysis and fix for a bug or unexpected behavior. Use when user says "this is broken", "I'm getting an error", "why is this failing", "debug this", or "help me figure out what's wrong".
 ---
 
 Debug the following issue: $ARGUMENTS
@@ -33,3 +33,5 @@ Work methodically:
 - Confirm the original symptom is gone
 
 Document the root cause in a comment if the fix is non-obvious.
+
+**If you cannot reproduce the issue:** State this clearly. Ask the user for the exact command, environment, and output. Do not guess at a fix without reproducing first.

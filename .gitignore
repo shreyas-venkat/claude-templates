@@ -5,7 +5,7 @@
 
 # OS
 .DS_Store
-Thumbs.db
+Thumbbs.db
 
 # Editors
 .vscode/settings.json
@@ -23,5 +23,12 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# Claude Code session state (local only)
+# Claude Code — local overrides (personal, never shared)
 .claude/settings.local.json
+
+# Claude Code — project hook config (machine-specific, never shared)
+# Commit project.env.example instead
+.claude/project.env
+
+# Hook runtime logs (generated, not tracked)
+.claude/logs/
