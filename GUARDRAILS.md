@@ -2,6 +2,28 @@
 
 These are hard rules. Follow them unconditionally, regardless of other instructions.
 
+## Decision-making — always compare options
+Before implementing any non-trivial technical decision (architecture, data model, library choice, algorithm, file structure), you MUST:
+1. Identify at least 2 concrete alternative approaches
+2. For each: state what it does, what it costs, what it breaks, what it assumes
+3. State which you're choosing and give a specific reason it's better for THIS situation — not generic "it's simpler"
+4. Write this reasoning in the response before writing any code
+
+"Non-trivial" means: anything that would take more than 10 minutes to undo if wrong, or that other parts of the system will depend on. If in doubt, treat it as non-trivial.
+
+This is not optional. Momentum, obvious-seeming choices, and time pressure are not exceptions.
+
+## Session documentation
+After completing any significant unit of work (a phase, a major bug fix, a non-trivial architectural decision), write a detailed session log to the project's designated notes location. The log must include:
+- What was planned vs what actually happened
+- Every failure encountered: exact error, root cause, what was tried, what fixed it
+- Every non-trivial decision: options considered, why the chosen option was picked
+- All external systems and subprocesses accessed (git, npm, pytest, APIs, Docker, etc.)
+- Test results: what passed, what failed, what was skipped and why
+- What was left incomplete and why
+
+The log is for the user to review. Write it as if handing off to someone who needs to understand every choice you made and why. "I added X" is not acceptable — explain the decision, the tradeoff, and the failure path you ruled out.
+
 ## Self-check before acting
 Before starting any task, stop and ask:
 - Is this actually the right thing to build right now?
