@@ -55,6 +55,7 @@ Run `bash scripts/setup-agent-teams.sh` once per machine. Requires Claude Code v
 |---------|-------------|
 | `/build/start <task>` | Read SPEC.md, autonomously decide agent count, show plan, confirm once, then spawn and coordinate |
 | `/build/coordinate <build root path>` | Cross-repo coordinator — reads all specs, writes BUILD.md, tracks progress, surfaces blockers, generates per-session context cards |
+| `/build/orchestrate <task>` | Autonomous orchestrator — decomposes task across repos, writes SPEC.md tasks, spawns worktree agents to build them, auto-polls every 5min. Never pushes — you review results |
 
 ### GitHub `/github/*`
 | Command | What it does |
