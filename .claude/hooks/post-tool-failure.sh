@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # post-tool-failure.sh
-# Fires: PostToolUseFailure (any tool that errors)
+# Fires: PostToolUseFailure on Bash|Edit|MultiEdit|Write only
 # Blocks blind retries — forces Claude to diagnose before trying again.
+# Read/Glob/Grep failures are ignored — they're benign.
 
 set -euo pipefail
 
@@ -14,6 +15,13 @@ else
   TOOL_NAME=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_name','unknown'))" 2>/dev/null || echo "unknown")
   ERROR=$(echo "$INPUT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('tool_response',{}).get('error','unknown error'))" 2>/dev/null || echo "unknown error")
 fi
+
+# Silent pass for read-only tool failures — not worth blocking on
+case "$TOOL_NAME" in
+  Read|Glob|Grep|LS|TodoRead|WebSearch|WebFetch)
+    exit 0
+    ;;
+esac
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 LOG_DIR="$PROJECT_DIR/.claude/logs"
