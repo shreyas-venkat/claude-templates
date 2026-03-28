@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # post-tool-failure.sh
-# Fires: PostToolUseFailure on Bash|Edit|MultiEdit|Write only
+# Fires: PostToolUseFailure on Bash|Edit|MultiEdit|Write|Task only
 # Blocks blind retries — forces Claude to diagnose before trying again.
-# Read/Glob/Grep failures are ignored — they're benign.
+# Silent pass on read-only tool failures (Read, Glob, Grep etc).
 
 set -euo pipefail
 

@@ -16,21 +16,18 @@ fi
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 SPEC_FILE="$PROJECT_DIR/SPEC.md"
 
-# Allow edits to SPEC.md itself and hook/config files — silent pass
+# Allow edits to SPEC.md itself, config files, and template files
 case "$FILE_PATH" in
-  *SPEC.md*|*.claude/*|*GUARDRAILS.md*|*CLAUDE.md*) exit 0 ;;
+  *SPEC.md*|*.claude/*|*CLAUDE.md*|*GUARDRAILS.md*) exit 0 ;;
 esac
 
 deny() {
-  python3 -c "
-import json, sys
-print(json.dumps({
-  'hookSpecificOutput': {
-    'permissionDecision': 'deny',
-    'permissionDecisionReason': sys.argv[1]
-  }
-}))
-" "$1" >&2
+  printf '%s\n' "{
+    \"hookSpecificOutput\": {
+      \"permissionDecision\": \"deny\",
+      \"permissionDecisionReason\": \"$1\"
+    }
+  }" >&2
   exit 2
 }
 
@@ -38,17 +35,18 @@ if [[ ! -f "$SPEC_FILE" ]]; then
   deny "BLOCKED: No SPEC.md found. Run /meta/spec to create one before writing any code."
 fi
 
-# Use a temp file to avoid heredoc + argv issues
-PYCHECK=$(mktemp /tmp/checkspec_XXXXXX.py)
-cat > "$PYCHECK" << 'PYEOF'
-import sys
+# Inline python3 heredoc — reliable cross-platform, no temp file needed
+RESULT=$(python3 - "$SPEC_FILE" << 'PYEOF'
+import sys, re
 
-with open(sys.argv[1]) as f:
-    content = f.read()
+try:
+    with open(sys.argv[1], encoding='utf-8') as f:
+        content = f.read()
+except Exception:
+    print("ok")  # can't read file — don't block
+    sys.exit(0)
 
 lines = content.split('\n')
-
-# Check Goal section has real content
 in_goal = False
 goal_filled = False
 for line in lines:
@@ -61,24 +59,13 @@ for line in lines:
         goal_filled = True
         break
 
-# Check numbered plan exists
-import re
-plan_lines = [l for l in lines if re.match(r'^\s*[0-9]+\.', l)]
-
-if not goal_filled:
-    print("no_goal")
-elif len(plan_lines) == 0:
-    print("no_plan")
-else:
-    print("ok")
+plan_filled = bool(re.search(r'^\s*[0-9]+\.', content, re.MULTILINE))
+print("ok" if (goal_filled and plan_filled) else "empty")
 PYEOF
+)
 
-RESULT=$(python3 "$PYCHECK" "$SPEC_FILE" 2>/dev/null || echo "error")
-rm -f "$PYCHECK"
+if [[ "$RESULT" != "ok" ]]; then
+  deny "BLOCKED: SPEC.md Goal and/or Implementation Plan are not filled out. Complete them or run /meta/spec."
+fi
 
-case "$RESULT" in
-  ok) exit 0 ;;
-  no_goal) deny "BLOCKED: SPEC.md Goal section is empty. Fill it in before writing any code." ;;
-  no_plan) deny "BLOCKED: SPEC.md has no numbered Implementation Plan. Add steps before writing any code." ;;
-  *) exit 0 ;;  # On error, fail open — don't block Claude on a hook bug
-esac
+exit 0
