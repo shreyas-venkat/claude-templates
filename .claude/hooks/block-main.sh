@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-# block-main.sh
-# Fires: PreToolUse on Edit|MultiEdit|Write|Bash
-
+# block-main.sh — PreToolUse on Edit|MultiEdit|Write|Bash
 set -euo pipefail
-source "$(dirname "$0")/_python.sh"
+PY=$(command -v python3 2>/dev/null || command -v python 2>/dev/null || echo "python")
 
 INPUT=$(cat)
-
 if command -v jq &>/dev/null; then
   TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // "unknown"')
   COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // ""')
@@ -17,35 +14,23 @@ fi
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 CURRENT_BRANCH=$(git -C "$PROJECT_DIR" branch --show-current 2>/dev/null || echo "")
-
-if [[ -z "$CURRENT_BRANCH" ]]; then exit 0; fi
+[[ -z "$CURRENT_BRANCH" ]] && exit 0
 
 deny() {
-  $PY -c "
-import json, sys
-print(json.dumps({
-  'hookSpecificOutput': {
-    'permissionDecision': 'deny',
-    'permissionDecisionReason': sys.argv[1]
-  }
-}))
-" "$1" >&2
+  $PY -c "import json,sys; print(json.dumps({'hookSpecificOutput':{'permissionDecision':'deny','permissionDecisionReason':sys.argv[1]}}))" "$1" >&2
   exit 2
 }
 
 case "$TOOL_NAME" in
   Edit|MultiEdit|Write)
-    if [[ "$CURRENT_BRANCH" == "main" || "$CURRENT_BRANCH" == "master" ]]; then
-      deny "BLOCKED: On main branch. Create a feature branch first: git checkout -b feat/your-feature-name"
-    fi
+    [[ "$CURRENT_BRANCH" == "main" || "$CURRENT_BRANCH" == "master" ]] && \
+      deny "BLOCKED: On main branch. Run: git checkout -b feat/your-feature-name"
     ;;
   Bash)
-    if echo "$COMMAND" | grep -qE 'git push.*(origin[[:space:]]+)?(main|master)'; then
-      deny "BLOCKED: Direct push to main is not allowed. Open a pull request instead."
-    fi
-    if echo "$COMMAND" | grep -qE 'git push.*(--force|-f)([[:space:]]|$)'; then
+    echo "$COMMAND" | grep -qE 'git push.*(origin[[:space:]]+)?(main|master)' && \
+      deny "BLOCKED: No direct push to main. Open a PR."
+    echo "$COMMAND" | grep -qE 'git push.*(--force|-f)([[:space:]]|$)' && \
       deny "BLOCKED: Force push is never allowed."
-    fi
     ;;
 esac
 

@@ -1,131 +1,94 @@
 #!/usr/bin/env bash
-# stop-check.sh
-# Fires: Stop
-
+# stop-check.sh — Stop hook
 set -euo pipefail
-source "$(dirname "$0")/_python.sh"
+PY=$(command -v python3 2>/dev/null || command -v python 2>/dev/null || echo "python")
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 LOG_DIR="$PROJECT_DIR/.claude/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/stop-check.log"
-TIMESTAMP=$($PY -c "import datetime; print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))" 2>/dev/null || echo "unknown-time")
-echo "[$TIMESTAMP] Stop hook fired" >> "$LOG_FILE"
+TS=$($PY -c "import datetime; print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))" 2>/dev/null || echo "now")
+echo "[$TS] Stop hook fired" >> "$LOG_FILE"
 
 FAILURES=()
 
 PROJECT_ENV="$PROJECT_DIR/.claude/project.env"
 TEST_CMD=""
-if [[ -f "$PROJECT_ENV" ]]; then
-  TEST_CMD=$(grep '^TEST_CMD=' "$PROJECT_ENV" | cut -d'=' -f2- | tr -d '"' 2>/dev/null || echo "")
-fi
+[[ -f "$PROJECT_ENV" ]] && TEST_CMD=$(grep '^TEST_CMD=' "$PROJECT_ENV" | cut -d'=' -f2- | tr -d '"' 2>/dev/null || echo "")
 
 if [[ -z "$TEST_CMD" ]]; then
-  if [[ -f "$PROJECT_DIR/pyproject.toml" || -f "$PROJECT_DIR/setup.py" ]]; then
-    TEST_CMD="python -m pytest tests/ -v"
-  elif [[ -f "$PROJECT_DIR/package.json" ]]; then
-    TEST_CMD="npm test"
-  elif [[ -f "$PROJECT_DIR/go.mod" ]]; then
-    TEST_CMD="go test ./..."
-  elif [[ -f "$PROJECT_DIR/Cargo.toml" ]]; then
-    TEST_CMD="cargo test"
-  fi
+  [[ -f "$PROJECT_DIR/pyproject.toml" || -f "$PROJECT_DIR/setup.py" ]] && TEST_CMD="python -m pytest tests/ -v"
+  [[ -f "$PROJECT_DIR/package.json" ]] && TEST_CMD="npm test"
+  [[ -f "$PROJECT_DIR/go.mod" ]] && TEST_CMD="go test ./..."
+  [[ -f "$PROJECT_DIR/Cargo.toml" ]] && TEST_CMD="cargo test"
 fi
 
-# 1. Run full test suite
+# 1. Tests
 if [[ -n "$TEST_CMD" ]]; then
   cd "$PROJECT_DIR"
   TEST_OUTPUT=$(eval "$TEST_CMD" 2>&1) || true
-  TEST_EXIT=$?
-  if [[ $TEST_EXIT -ne 0 ]]; then
-    TAIL=$(echo "$TEST_OUTPUT" | tail -30)
-    FAILURES+=("TEST SUITE FAILED:\n$TAIL")
-  fi
+  [[ $? -ne 0 ]] && FAILURES+=("TEST SUITE FAILED:\n$(echo "$TEST_OUTPUT" | tail -30)")
 fi
 
-# 2. Check for debug/todo markers
+# 2. Debug markers
 MODIFIED=$(git -C "$PROJECT_DIR" diff --name-only HEAD 2>/dev/null || echo "")
 if [[ -n "$MODIFIED" ]]; then
-  PYCHECK=$(mktemp /tmp/stopcheck_XXXXXX.py)
+  PYCHECK=$(mktemp)
   cat > "$PYCHECK" << 'PYEOF'
-import sys, os, re
-
-modified_str = open(sys.argv[1]).read().strip()
-project_dir = sys.argv[2]
-if not modified_str:
-    sys.exit(0)
-pattern = re.compile(r'(console\.log|print\(|debugger|TODO|FIXME|HACK|XXX)')
-hits = []
-for rel in modified_str.splitlines():
-    path = os.path.join(project_dir, rel)
+import sys,os,re
+lines=open(sys.argv[1]).read().strip()
+proj=sys.argv[2]
+if not lines: sys.exit(0)
+pat=re.compile(r'(console\.log|print\(|debugger|TODO|FIXME|HACK|XXX)')
+hits=[]
+for rel in lines.splitlines():
     try:
-        with open(path, encoding='utf-8', errors='ignore') as f:
-            if pattern.search(f.read()):
-                hits.append(rel)
-    except Exception:
-        pass
-if hits:
-    print('\n'.join(hits))
+        with open(os.path.join(proj,rel),encoding='utf-8',errors='ignore') as f:
+            if pat.search(f.read()): hits.append(rel)
+    except: pass
+if hits: print('\n'.join(hits))
 PYEOF
-  MOD_FILE=$(mktemp /tmp/stopcheck_mod_XXXXXX.txt)
-  echo "$MODIFIED" > "$MOD_FILE"
-  DEBUG_HITS=$($PY "$PYCHECK" "$MOD_FILE" "$PROJECT_DIR" 2>/dev/null || echo "")
-  rm -f "$PYCHECK" "$MOD_FILE"
-  if [[ -n "$DEBUG_HITS" ]]; then
-    FAILURES+=("DEBUG/TODO MARKERS in:\n$DEBUG_HITS\nClean these up before finishing.")
-  fi
+  MOD=$(mktemp); echo "$MODIFIED" > "$MOD"
+  DEBUG_HITS=$($PY "$PYCHECK" "$MOD" "$PROJECT_DIR" 2>/dev/null || echo "")
+  rm -f "$PYCHECK" "$MOD"
+  [[ -n "$DEBUG_HITS" ]] && FAILURES+=("DEBUG/TODO MARKERS in:\n$DEBUG_HITS")
 fi
 
-# 3. Check test files exist for new source files
+# 3. Test file coverage
 NEW_SRC=$(git -C "$PROJECT_DIR" diff --name-only HEAD 2>/dev/null || echo "")
 if [[ -n "$NEW_SRC" ]]; then
-  PYCHECK2=$(mktemp /tmp/stopcheck2_XXXXXX.py)
+  PYCHECK2=$(mktemp)
   cat > "$PYCHECK2" << 'PYEOF'
-import sys, os, re
-
-new_src_str = open(sys.argv[1]).read().strip()
-project_dir = sys.argv[2]
-if not new_src_str:
-    sys.exit(0)
-skip_pattern = re.compile(r'(test|spec|\.(md|json|sh|yaml|toml|env|lock))$', re.IGNORECASE)
-missing = []
-for rel in new_src_str.splitlines():
-    if skip_pattern.search(rel):
-        continue
-    basename = os.path.splitext(os.path.basename(rel))[0]
-    found = False
-    for root, dirs, files in os.walk(project_dir):
-        dirs[:] = [d for d in dirs if not d.startswith('.')]
+import sys,os,re
+lines=open(sys.argv[1]).read().strip()
+proj=sys.argv[2]
+if not lines: sys.exit(0)
+skip=re.compile(r'(test|spec|\.(md|json|sh|yaml|toml|env|lock))$',re.I)
+missing=[]
+for rel in lines.splitlines():
+    if skip.search(rel): continue
+    base=os.path.splitext(os.path.basename(rel))[0]
+    found=False
+    for root,dirs,files in os.walk(proj):
+        dirs[:]=[d for d in dirs if not d.startswith('.')]
         for f in files:
-            if (basename in f) and re.search(r'(test|spec)', f, re.IGNORECASE):
-                found = True
-                break
-        if found:
-            break
-    if not found:
-        missing.append(rel)
-if missing:
-    print('\n'.join(missing))
+            if base in f and re.search(r'(test|spec)',f,re.I): found=True; break
+        if found: break
+    if not found: missing.append(rel)
+if missing: print('\n'.join(missing))
 PYEOF
-  SRC_FILE=$(mktemp /tmp/stopcheck_src_XXXXXX.txt)
-  echo "$NEW_SRC" > "$SRC_FILE"
-  MISSING=$($PY "$PYCHECK2" "$SRC_FILE" "$PROJECT_DIR" 2>/dev/null || echo "")
-  rm -f "$PYCHECK2" "$SRC_FILE"
-  if [[ -n "$MISSING" ]]; then
-    FAILURES+=("NO TEST FILE for:\n$MISSING\nEvery source file needs a test.")
-  fi
+  SRC=$(mktemp); echo "$NEW_SRC" > "$SRC"
+  MISSING=$($PY "$PYCHECK2" "$SRC" "$PROJECT_DIR" 2>/dev/null || echo "")
+  rm -f "$PYCHECK2" "$SRC"
+  [[ -n "$MISSING" ]] && FAILURES+=("NO TEST FILE for:\n$MISSING")
 fi
 
 if [[ ${#FAILURES[@]} -gt 0 ]]; then
-  FAILURE_MSG=$(printf '%s\n---\n' "${FAILURES[@]}")
-  echo "[$TIMESTAMP] BLOCKED: ${#FAILURES[@]} issue(s)" >> "$LOG_FILE"
-  $PY -c "
-import json, sys
-msg = sys.argv[1]
-print(json.dumps({'decision': 'block', 'reason': 'TASK NOT DONE — issues must be resolved:\n\n' + msg}))
-" "$FAILURE_MSG"
+  MSG=$(printf '%s\n---\n' "${FAILURES[@]}")
+  echo "[$TS] BLOCKED: ${#FAILURES[@]} issue(s)" >> "$LOG_FILE"
+  $PY -c "import json,sys; print(json.dumps({'decision':'block','reason':'TASK NOT DONE:\n\n'+sys.argv[1]}))" "$MSG"
   exit 1
 fi
 
-echo "[$TIMESTAMP] All checks PASSED" >> "$LOG_FILE"
+echo "[$TS] All checks PASSED" >> "$LOG_FILE"
 exit 0
