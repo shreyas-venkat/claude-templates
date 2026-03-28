@@ -32,3 +32,5 @@ __pycache__/
 
 # Hook runtime logs (generated, not tracked)
 .claude/logs/
+.agent-tasks.md
+.agent-mailbox/
